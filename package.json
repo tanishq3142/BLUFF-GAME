@@ -1,23 +1,11 @@
 {
   "name": "bluff-multiplayer-game",
   "version": "1.0.0",
-  "description": "Multiplayer Bluff (Cheat / I Doubt It) Card Game with live voice chat for 2 to 16 players - Developed by Tanishq__",
+  "private": true,
+  "description": "Multiplayer Bluff Card Game - Developed by Tanishq__",
   "scripts": {
-    "start": "node server.js",
-    "test": "node test_game.js"
+    "start": "node server.js"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "bluff",
-    "cheat",
-    "i-doubt-it",
-    "card-game",
-    "multiplayer",
-    "webrtc",
-    "voice-chat"
-  ],
   "author": "Tanishq__",
   "license": "MIT"
 }
