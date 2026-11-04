@@ -1,14 +1,9 @@
-// Bluff Multiplayer Frontend Engine
-// Dual-transport engine: High-performance WebSockets with automatic Vercel Serverless HTTP fallback
+// Bluff Multiplayer Card Game UI & App Controller
+// Powered by PeerJS P2P WebRTC mesh networking for persistent zero-drop multiplayer
 
 class BluffApp {
   constructor() {
-    this.ws = null;
-    this.transportMode = 'ws'; // 'ws' or 'http'
-    this.pollInterval = null;
-    this.lastRevealId = null;
-    this.lastProcessedMsgCount = 0;
-
+    this.network = null;
     this.roomCode = null;
     this.myId = null;
     this.myName = '';
@@ -17,8 +12,6 @@ class BluffApp {
     this.gameState = null;
     this.selectedCardIds = new Set();
     this.sortMode = 'rank';
-
-    this.voiceManager = null;
     this.challengeTimerInterval = null;
 
     this.init();
@@ -29,13 +22,8 @@ class BluffApp {
     this.loadSavedProfile();
     this.checkUrlForRoomCode();
 
-    // Voice manager init
-    this.voiceManager = new VoiceChatManager(this);
-    this.voiceManager.onLocalSpeaking = (speaking) => {
-      this.updateAvatarSpeaking(this.myId, speaking);
-    };
-
-    this.connectTransport();
+    // Initialize P2P Network Manager
+    this.network = new P2PManager(this);
   }
 
   setupAvatarPicker() {
@@ -56,8 +44,8 @@ class BluffApp {
       document.getElementById('input-player-name').value = savedName;
       this.myName = savedName;
     } else {
-      const randomNames = ['AceHunter', 'CardShark', 'RoyalFlush', 'BluffKing', 'ShadowRogue', 'MysticFox'];
-      const defaultName = randomNames[Math.floor(Math.random() * randomNames.length)];
+      const names = ['AceHunter', 'CardShark', 'RoyalFlush', 'BluffKing', 'ShadowFox', 'MysticWolf'];
+      const defaultName = names[Math.floor(Math.random() * names.length)];
       document.getElementById('input-player-name').value = defaultName;
       this.myName = defaultName;
     }
@@ -85,247 +73,49 @@ class BluffApp {
     }
   }
 
-  connectTransport() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
-
-    let wsHandshakeFailed = false;
-    const wsTimeout = setTimeout(() => {
-      if (this.transportMode === 'ws' && (!this.ws || this.ws.readyState !== WebSocket.OPEN)) {
-        console.log('Switching to Vercel Serverless HTTP transport mode.');
-        this.switchToHttpMode();
-      }
-    }, 1800);
-
-    try {
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        clearTimeout(wsTimeout);
-        this.transportMode = 'ws';
-        console.log('Connected via WebSocket');
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          this.handleServerMessage(msg);
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e);
-        }
-      };
-
-      this.ws.onerror = () => {
-        if (!wsHandshakeFailed) {
-          wsHandshakeFailed = true;
-          clearTimeout(wsTimeout);
-          this.switchToHttpMode();
-        }
-      };
-
-      this.ws.onclose = () => {
-        if (this.transportMode === 'ws') {
-          console.warn('WebSocket disconnected. Falling back to HTTP sync...');
-          this.switchToHttpMode();
-        }
-      };
-    } catch (err) {
-      this.switchToHttpMode();
-    }
+  onRoomCreated(roomCode, hostId) {
+    this.roomCode = roomCode;
+    this.myId = hostId;
+    this.isHost = true;
+    this.updateRoomNav();
   }
 
-  switchToHttpMode() {
-    this.transportMode = 'http';
-    if (this.ws) {
-      try { this.ws.close(); } catch (e) {}
-      this.ws = null;
-    }
-    this.startHttpPolling();
+  onRoomJoined(roomCode, playerId) {
+    this.roomCode = roomCode;
+    this.myId = playerId;
+    this.isHost = false;
+    this.updateRoomNav();
   }
 
-  startHttpPolling() {
-    if (this.pollInterval) clearInterval(this.pollInterval);
+  updateRoomNav() {
+    const url = new URL(window.location);
+    url.searchParams.set('room', this.roomCode);
+    window.history.pushState({}, '', url);
 
-    this.pollInterval = setInterval(async () => {
-      if (!this.roomCode || !this.myId) return;
+    document.getElementById('nav-room-badge').style.display = 'flex';
+    document.getElementById('nav-room-code').textContent = this.roomCode;
+    document.getElementById('btn-mic').style.display = 'flex';
+    document.getElementById('btn-chat-toggle').style.display = 'flex';
 
-      try {
-        const res = await fetch(`/api/game?action=SYNC&roomCode=${encodeURIComponent(this.roomCode)}&playerId=${encodeURIComponent(this.myId)}`);
-        if (!res.ok) return;
+    closeAllModals();
 
-        const data = await res.json();
-        if (data.success && data.state) {
-          this.updateRoomState(data.state);
-
-          // Handle incoming WebRTC signals over HTTP
-          if (Array.isArray(data.state.queuedSignals)) {
-            for (const item of data.state.queuedSignals) {
-              this.voiceManager.handleSignal(item.senderId, item.signal);
-            }
-          }
-
-          // Handle reveal events
-          if (data.state.revealEvent && data.state.revealEvent.id !== this.lastRevealId) {
-            this.lastRevealId = data.state.revealEvent.id;
-            this.showBluffReveal(data.state.revealEvent);
-          }
-
-          // Sync messages
-          if (Array.isArray(data.state.messages)) {
-            const newCount = data.state.messages.length;
-            if (newCount !== this.lastProcessedMsgCount) {
-              const messagesContainer = document.getElementById('chat-messages-container');
-              messagesContainer.innerHTML = '';
-              data.state.messages.forEach(m => this.appendChatMessage(m));
-              this.lastProcessedMsgCount = newCount;
-            }
-          }
-        }
-      } catch (err) {
-        // quiet polling error
-      }
-    }, 450);
-  }
-
-  async send(data) {
-    const { type, payload } = data;
-
-    if (this.transportMode === 'ws' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(data));
-      return;
-    }
-
-    // HTTP Mode Request
-    try {
-      const res = await fetch('/api/game', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: type,
-          roomCode: this.roomCode,
-          playerId: this.myId,
-          ...(payload || {})
-        })
-      });
-
-      const result = await res.json();
-      if (!result.success) {
-        if (result.message) this.showToast(result.message);
-        return;
-      }
-
-      if (type === 'HOST_ROOM' || type === 'JOIN_ROOM') {
-        this.roomCode = result.roomCode;
-        this.myId = result.playerId;
-        this.voiceManager.setMyId(this.myId);
-
-        const url = new URL(window.location);
-        url.searchParams.set('room', this.roomCode);
-        window.history.pushState({}, '', url);
-
-        document.getElementById('nav-room-badge').style.display = 'flex';
-        document.getElementById('nav-room-code').textContent = this.roomCode;
-        document.getElementById('btn-mic').style.display = 'flex';
-        document.getElementById('btn-chat-toggle').style.display = 'flex';
-
-        closeAllModals();
-        this.voiceManager.initMicrophone();
-
-        if (result.state) {
-          this.updateRoomState(result.state);
-        }
-      } else if (result.state) {
-        this.updateRoomState(result.state);
-        if (result.reveal) {
-          this.showBluffReveal(result.reveal);
-        }
-      }
-    } catch (err) {
-      console.error('HTTP send error:', err);
-      this.showToast('Network error communicating with server.');
-    }
-  }
-
-  handleServerMessage(msg) {
-    const { type, payload } = msg;
-
-    switch (type) {
-      case 'ROOM_CREATED':
-      case 'ROOM_JOINED': {
-        this.roomCode = payload.roomCode;
-        this.myId = payload.playerId;
-        this.voiceManager.setMyId(this.myId);
-
-        const url = new URL(window.location);
-        url.searchParams.set('room', this.roomCode);
-        window.history.pushState({}, '', url);
-
-        document.getElementById('nav-room-badge').style.display = 'flex';
-        document.getElementById('nav-room-code').textContent = this.roomCode;
-        document.getElementById('btn-mic').style.display = 'flex';
-        document.getElementById('btn-chat-toggle').style.display = 'flex';
-
-        closeAllModals();
-        this.voiceManager.initMicrophone();
-        break;
-      }
-
-      case 'ROOM_STATE': {
-        this.updateRoomState(payload);
-        break;
-      }
-
-      case 'BLUFF_REVEAL': {
-        this.showBluffReveal(payload);
-        break;
-      }
-
-      case 'CHAT_MESSAGE': {
-        this.appendChatMessage(payload);
-        break;
-      }
-
-      case 'VOICE_STATE_UPDATE': {
-        this.updatePlayerVoiceState(payload.playerId, payload.isMuted, payload.isSpeaking);
-        break;
-      }
-
-      case 'RTC_SIGNAL': {
-        this.voiceManager.handleSignal(payload.senderId, payload.signal);
-        break;
-      }
-
-      case 'RTC_PEER_LEFT': {
-        this.voiceManager.removePeer(payload.peerId);
-        break;
-      }
-
-      case 'GAME_OVER': {
-        this.showGameOverModal(payload.winners);
-        break;
-      }
-
-      case 'ERROR': {
-        this.showToast(payload.message || 'An error occurred');
-        break;
-      }
-    }
+    // Request microphone permission on room entry
+    this.network.initMicrophone();
   }
 
   updateRoomState(state) {
     this.gameState = state;
     this.isHost = state.hostId === this.myId;
 
-    for (const p of state.players) {
-      if (p.id !== this.myId) {
-        this.voiceManager.connectToPeer(p.id);
-      }
-    }
-
     if (state.state === 'LOBBY') {
       this.renderLobby(state);
     } else if (state.state === 'PLAYING') {
       this.renderGame(state);
+    } else if (state.state === 'GAME_OVER') {
+      this.renderGame(state);
+      if (state.winners && state.winners.length > 0) {
+        this.showGameOverModal(state.winners);
+      }
     }
   }
 
@@ -385,6 +175,7 @@ class BluffApp {
     document.getElementById('view-lobby').style.display = 'none';
     document.getElementById('view-game').style.display = 'flex';
 
+    // Current Required Rank display
     const rankEl = document.getElementById('table-current-rank');
     const rankNameMap = {
       'A': 'ACES (A)', '2': 'TWOS (2)', '3': 'THREES (3)', '4': 'FOURS (4)',
@@ -393,8 +184,10 @@ class BluffApp {
     };
     rankEl.textContent = rankNameMap[state.currentRequiredRank] || `${state.currentRequiredRank}s`;
 
+    // Center Pile count
     document.getElementById('center-pile-count').textContent = `Pile: ${state.pileCount} cards`;
 
+    // Last Play action banner
     const lastPlayBanner = document.getElementById('last-play-banner');
     if (state.lastPlay) {
       lastPlayBanner.style.display = 'block';
@@ -404,6 +197,7 @@ class BluffApp {
       lastPlayBanner.style.display = 'none';
     }
 
+    // Challenge button and countdown
     const challengeControls = document.getElementById('challenge-controls');
     const btnBluff = document.getElementById('btn-call-bluff');
 
@@ -425,7 +219,10 @@ class BluffApp {
       }
     }
 
+    // Render seats around table
     this.renderTableSeats(state);
+
+    // Render player's hand cards
     this.renderPlayerHand(state.yourHand || [], state);
   }
 
@@ -437,6 +234,7 @@ class BluffApp {
     const count = players.length;
     if (count === 0) return;
 
+    // You are positioned at bottom-center (angle = 90 deg)
     const myIndex = players.findIndex(p => p.id === this.myId);
     const rotationOffset = myIndex !== -1 ? myIndex : 0;
 
@@ -755,7 +553,7 @@ class BluffApp {
 // Global App Instance
 window.bluffApp = new BluffApp();
 
-// Global UI Action Handlers
+// Global UI Handlers
 function openHostModal() {
   const nameInput = document.getElementById('input-player-name');
   if (!nameInput.value.trim()) {
@@ -788,6 +586,7 @@ function confirmHostRoom() {
   const name = document.getElementById('input-player-name').value.trim() || 'Host';
   const avatar = window.bluffApp.myAvatar;
   localStorage.setItem('bluff_name', name);
+  window.bluffApp.myName = name;
 
   const settings = {
     maxPlayers: Number(document.getElementById('host-max-players').value),
@@ -798,11 +597,9 @@ function confirmHostRoom() {
     challengeWindow: Number(document.getElementById('host-challenge-window').value)
   };
 
-  window.bluffApp.myName = name;
-  window.bluffApp.send({
-    type: 'HOST_ROOM',
-    payload: { name, avatar, settings }
-  });
+  const code = window.bluffApp.network.generateRoomCode();
+  window.bluffApp.showToast(`Creating room ${code}...`);
+  window.bluffApp.network.hostRoom(code, name, avatar, settings);
 }
 
 function confirmJoinRoom() {
@@ -818,10 +615,8 @@ function confirmJoinRoom() {
   localStorage.setItem('bluff_name', name);
   window.bluffApp.myName = name;
 
-  window.bluffApp.send({
-    type: 'JOIN_ROOM',
-    payload: { roomCode, name, avatar }
-  });
+  window.bluffApp.showToast(`Connecting to room ${roomCode}...`);
+  window.bluffApp.network.joinRoom(roomCode, name, avatar);
 }
 
 function copyInviteLink() {
@@ -840,7 +635,7 @@ function copyInviteLink() {
 }
 
 function startGame() {
-  window.bluffApp.send({ type: 'START_GAME' });
+  window.bluffApp.network.sendAction('START_GAME');
 }
 
 function playSelectedCards() {
@@ -858,22 +653,17 @@ function playSelectedCards() {
     }
   }
 
-  window.bluffApp.send({
-    type: 'PLAY_CARDS',
-    payload: { cardIds, claimedRank }
-  });
-
-  window.soundManager.playCardDeal();
+  window.bluffApp.network.sendAction('PLAY_CARDS', { cardIds, claimedRank });
   window.bluffApp.selectedCardIds.clear();
 }
 
 function passTurn() {
-  window.bluffApp.send({ type: 'PASS_TURN' });
+  window.bluffApp.network.sendAction('PASS_TURN');
 }
 
 function callBluff() {
   window.soundManager.playBluffAlert();
-  window.bluffApp.send({ type: 'CALL_BLUFF' });
+  window.bluffApp.network.sendAction('CALL_BLUFF');
 }
 
 function sortHand(mode) {
@@ -884,11 +674,11 @@ function sortHand(mode) {
 }
 
 function toggleMicrophone() {
-  const isEnabledNow = window.bluffApp.voiceManager.toggleMute();
+  const isEnabled = window.bluffApp.network.toggleMicrophone();
   const micBtn = document.getElementById('btn-mic');
   const micIcon = document.getElementById('mic-icon');
 
-  if (isEnabledNow) {
+  if (isEnabled) {
     micBtn.className = 'btn-icon active';
     micBtn.title = 'Microphone Active (Speaking Enabled)';
     micIcon.textContent = '🎙️';
@@ -919,8 +709,7 @@ function toggleSound() {
 }
 
 function toggleChatDrawer() {
-  const drawer = document.getElementById('chat-drawer');
-  drawer.classList.toggle('open');
+  document.getElementById('chat-drawer').classList.toggle('open');
 }
 
 function sendChatMessage() {
@@ -928,23 +717,16 @@ function sendChatMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  window.bluffApp.send({
-    type: 'CHAT_MESSAGE',
-    payload: { text }
-  });
-
+  window.bluffApp.network.sendAction('CHAT', { text });
   input.value = '';
 }
 
 function sendQuickChat(emoteText) {
-  window.bluffApp.send({
-    type: 'CHAT_MESSAGE',
-    payload: { text: emoteText }
-  });
+  window.bluffApp.network.sendAction('CHAT', { text: emoteText });
 }
 
 function returnToLobby() {
   document.getElementById('modal-gameover').classList.remove('active');
-  window.bluffApp.send({ type: 'LEAVE_ROOM' });
+  window.bluffApp.network.leaveRoom();
   window.location.reload();
 }
