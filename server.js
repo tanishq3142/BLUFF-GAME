@@ -64,17 +64,18 @@ const server = http.createServer((req, res) => {
   }
 
   const safePath = path.normalize(reqPath).replace(/^(\.\.[\/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safePath);
+  let filePath = path.join(PUBLIC_DIR, safePath);
 
-  if (!filePath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
+  // If not found in public, try root directory
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(__dirname, safePath);
   }
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      const indexPath = path.join(PUBLIC_DIR, 'index.html');
+      const indexPath = fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))
+        ? path.join(PUBLIC_DIR, 'index.html')
+        : path.join(__dirname, 'index.html');
       fs.readFile(indexPath, (err2, content) => {
         if (err2) {
           res.writeHead(404);
@@ -477,9 +478,13 @@ function handleDisconnect(ws, player) {
   }
 }
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`===============================================`);
-  console.log(`🃏 Bluff Multiplayer Game Server running at:`);
-  console.log(`👉 http://localhost:${PORT}`);
-  console.log(`===============================================`);
-});
+if (require.main === module) {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`===============================================`);
+    console.log(`🃏 Bluff Multiplayer Game Server running at:`);
+    console.log(`👉 http://localhost:${PORT}`);
+    console.log(`===============================================`);
+  });
+}
+
+module.exports = server;

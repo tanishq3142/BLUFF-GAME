@@ -1,126 +1,68 @@
-# 🃏 BLUFF (Cheat / I Doubt It) - Multiplayer Card & Voice Game
+# 🃏 BLUFF (Cheat / I Doubt It)
+
+> The classic party card game of deception, wildcards, and high-stakes calls — playable online with **2 to 16 players** with integrated **live voice chat**.
 
 *Developed with ❤️ by **Tanishq__***
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Players](https://img.shields.io/badge/players-2%20to%2016-gold.svg)
-![Voice](https://img.shields.io/badge/voice-WebRTC%20Mesh-blue.svg)
-![Mobile & Desktop](https://img.shields.io/badge/platform-Mobile%20%7C%20Desktop-purple.svg)
-![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)
+---
 
-An online multiplayer adaptation of the classic social deception card party game **Bluff** (also known as *Cheat*, *I Doubt It*, or *BS*), supporting **2 to 16 players** with **integrated WebRTC voice chat**, real-time text chat, customizable decks, wild Jokers, and automated disconnect handling.
+## 📖 Overview
 
-Fully optimized and responsive across **mobile phones, tablets, and desktop computers**.
+**Bluff** (also widely known as *Cheat*, *I Doubt It*, or *BS*) is a social deception card game where players attempt to discard all the cards in their hand. The catch: cards are played face down, and players can lie about what they are playing — unless an opponent calls **"BLUFF!"** to challenge them.
 
-Built to be **100% ready for instant deployment to Vercel in a single commit**, with zero external npm dependencies.
+This web version brings the experience online with real-time peer-to-peer voice chat, customizable decks, wild Jokers, and responsive gameplay optimized for both mobile phones and desktops.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Features
 
-- **2 to 16 Players Supported**: Smoothly accommodates party groups from intimate 2-4 player duels to large 16-player games with dynamic trigonometric table seating.
-- **🎙️ Real-time Voice Chat**: Peer-to-peer WebRTC audio mesh with microphone mute/unmute, speaking visualizer rings around avatars, and zero external voice servers.
-- **💬 Live Text Chat & Emotes**: In-game drawer for messaging, game log notifications, and quick reaction buttons (`🤨 Sus`, `🤥 Liar!`, `🔥 Bluff!`, `🃏 Master`, `👏 GG`).
-- **👑 Dynamic Room Hosting & Joining**:
-  - **HOST**: Configure max players (2-16), deck counts (1, 2, 3, or Auto), Joker wildcards (0, 2, 4), game modes, and timers.
-  - **JOIN**: Enter a 6-character room code or join directly via shareable invite links (`?room=XYZ123`).
-  - **🔗 1-Click Link Sharing**: Copy invite links with automatic clipboard copy and toast notifications.
-- **🃏 Authentic Card Rules & Jokers**:
-  - Cards dealt evenly to all players with hands kept strictly hidden server-side.
-  - **Jokers as Wildcards**: Jokers count as wildcards and are always considered a truthful match for any claimed rank!
-  - **Rule Modes**: Classic Sequential rank mode (`A -> 2 -> 3 ... K -> A`) or Free Rank mode (lead player chooses the rank).
-- **🚨 Dramatic Bluff Challenge**:
-  - Pulsating "CALL BLUFF!" button during the challenge countdown.
-  - 3D card flip reveal animation showing played cards with instant verdict banners (`CAUGHT!` or `INNOCENT!`).
-  - Liar or false challenger picks up the entire center discard pile!
-- **🛡️ Mid-Game Player Departure Handling**:
-  - If a player disconnects or leaves mid-game, their cards are cleanly deposited into the center pile or cleared.
-  - Turns and active challenges automatically advance without stalling or breaking the room.
-- **🔊 Procedural Sound Synthesizer**: Web Audio API generates realistic card dealing, card sliding, bluff sirens, and victory fanfare without needing external audio files.
-- **⚡ Dual-Transport Architecture**: Works seamlessly on both **Vercel Serverless** (auto HTTP sync) and **Node.js WebSockets** for local / VPS hosting.
+- **Dynamic Player Count (2 to 16 Players)**: Play 1-on-1 duels or host massive 16-player party rooms. The oval poker table automatically adjusts its geometry and seats dynamically.
+- **🎙️ Real-time WebRTC Voice Chat**: Talk with opponents directly in your browser. Features live microphone mute/unmute and glowing audio visualizer rings around the player avatar when speaking.
+- **💬 In-Game Chat & Quick Emotes**: Send text messages and express yourself with quick reaction buttons (`🤨 Sus`, `🤥 Liar!`, `🔥 Bluff!`, `🃏 Master`, `👏 GG`).
+- **🃏 Customizable Card Decks & Wild Jokers**:
+  - Choose between 1 Deck (52 cards), 2 Decks (104 cards), 3 Decks (156 cards), or Auto-deck scaling based on player count.
+  - Optional **Jokers (0, 2, 4)**: Jokers act as wild cards and are **always considered truthful matches** for any claimed rank.
+- **🚨 Dramatic Bluff Reveal**:
+  - Pulsating challenge button with a real-time countdown timer.
+  - 3D card-flip reveal animation showing the played cards one-by-one.
+  - Instant visual and audio verdicts (`🚨 BLUFF CAUGHT!` or `🛡️ INNOCENT!`).
+  - Penalty cards are picked up into the loser's hand automatically.
+- **🛡️ Mid-Game Disconnect Protection**: If a player leaves mid-game, their cards are cleanly deposited into the center pile, and turns automatically advance so the game never freezes.
+- **🔊 Procedural Sound Effects**: Dynamic audio synthesizer using Web Audio API for card dealing, card sliding, siren alerts, and victory fanfares.
+- **📱 Mobile & Desktop Optimized**: Responsive touch controls, horizontal swipeable card tray, and scalable table felt designed for screens from small smartphones to large monitors.
 
 ---
 
-## 🎮 How to Play Bluff
+## 🎯 Game Rules & Setup
 
-1. **The Deal**: All cards from the chosen deck(s) are distributed evenly among all players.
-2. **The Play**: On your turn, place 1 to 4 cards face down into the center discard pile and declare what rank they are (e.g., *"Three Kings"*).
-3. **The Bluff**: You may tell the truth, or you may lie and play cards of any other rank!
-4. **Wild Jokers**: If Jokers are included, they act as wild cards and are **always considered truthful**.
-5. **The Challenge**: Any other player can call **"BLUFF!"** during the challenge window.
-   - If the player was **bluffing**: The liar takes the entire center discard pile into their hand.
-   - If the player was **truthful**: The challenger takes the entire center discard pile as penalty!
-6. **Winning the Game**: The first player to successfully discard all cards from their hand wins!
+### 1. Setup & Deal
+- **Players**: 2 to 16 players.
+- **Dealing**: Cards are shuffled and dealt out as evenly as possible to all players. Hands are kept hidden.
 
----
+### 2. Playing a Turn
+- On your turn, select between **1 and 4 cards** from your hand and place them face down into the center discard pile.
+- Declare the rank of the cards you played (e.g., *"Three Aces"* or *"Two Kings"*).
+- You can tell the truth if you have those cards, or you can bluff and play any other cards!
 
-## 🚀 Deploy to Vercel (1-Click)
+### 3. Wild Jokers
+- If Jokers are included in the room settings, they act as universal wildcards.
+- A Joker is **always counted as a truthful match** for whatever rank was declared.
 
-### Method 1: Via Vercel Web Dashboard (Recommended)
+### 4. Calling Bluff
+- During the challenge countdown after a card is played, any other player can press **"CALL BLUFF!"**.
+- The played cards are flipped face up for everyone to see:
+  - **If the player was bluffing**: The liar must take all the cards in the center discard pile into their hand!
+  - **If the player told the truth**: The challenger must take all the cards in the center discard pile as a penalty!
+- If nobody calls Bluff, the cards remain face down in the pile, and the next player takes their turn.
 
-1. Push this repository to your GitHub / GitLab account:
-   ```bash
-   git remote add origin https://github.com/<your-username>/bluff-game.git
-   git branch -M main
-   git push -u origin main
-   ```
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repository.
-3. Keep the default settings (Framework Preset: **Other**, Root Directory: `./`).
-4. Click **Deploy**! Vercel will deploy the site in ~30 seconds.
-
-### Method 2: Via Vercel CLI
-
-```bash
-npm install -g vercel
-vercel
-```
-
-Follow the prompts and select the defaults.
+### 5. Winning the Game
+- The first player to successfully discard all the cards from their hand wins the match (1st Place).
+- Subsequent rankings (2nd, 3rd) are tracked on the victory podium until the game concludes.
 
 ---
 
-## 💻 Running Locally
+## 🎨 Watermark & Credits
 
-You can run the game server locally using standard Node.js:
-
-```bash
-# Start server
-npm start
-```
-
-Or on Windows, simply double-click **`start.bat`**.
-
-Then open your browser at:
-```
-http://localhost:3000
-```
-
----
-
-## 📁 Repository Structure
-
-```
-.
-├── api/
-│   └── game.js         # Vercel Serverless Function (game state, sync & signaling)
-├── public/
-│   ├── index.html      # Game interface (Landing, Lobby, 16-player Table, Modals)
-│   ├── style.css       # Luxury casino felt theme & responsive dynamic seating
-│   ├── app.js          # Client game engine & dual WebSocket/HTTP transport
-│   ├── webrtc.js       # WebRTC peer-to-peer voice mesh & speaking detection
-│   └── audio.js        # Procedural Web Audio API sound effect synthesizer
-├── engine.js           # Core Bluff game engine (cards, rules, room management)
-├── server.js           # Zero-dependency Node.js HTTP & WebSocket server
-├── package.json        # Project metadata and start scripts
-├── vercel.json         # Vercel serverless routing configuration
-├── start.bat           # Windows 1-click launcher
-├── start.ps1           # PowerShell launcher
-└── README.md           # Documentation
-```
-
----
-
-## 📜 License
-
-MIT License. Free to play, modify, and host.
+- **Game**: Bluff (Cheat / I Doubt It) Multiplayer
+- **Developer**: **Tanishq__**
+- **License**: MIT

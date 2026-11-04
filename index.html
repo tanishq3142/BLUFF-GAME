@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BLUFF | Multiplayer Card & Voice Game - Developed by Tanishq__</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="logo-area">
+      <span class="logo-icon">🃏</span>
+      <div class="logo-text-group">
+        <span class="logo-title">BLUFF</span>
+        <span class="logo-by">by Tanishq__</span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Active Room Pill (shown in lobby/game) -->
+      <div id="nav-room-badge" class="room-badge" style="display: none;" onclick="copyInviteLink()" title="Click to copy invite link">
+        <span>ROOM: <strong id="nav-room-code">------</strong></span>
+        <span>🔗</span>
+      </div>
+
+      <!-- Voice Chat Mic Button -->
+      <button id="btn-mic" class="btn-icon muted" onclick="toggleMicrophone()" title="Microphone Muted" style="display: none;">
+        <span id="mic-icon">🎤</span>
+      </button>
+
+      <!-- Audio SFX Toggle -->
+      <button id="btn-sound" class="btn-icon" onclick="toggleSound()" title="Toggle Sound Effects">
+        <span id="sound-icon">🔊</span>
+      </button>
+
+      <!-- Chat Drawer Toggle Button -->
+      <button id="btn-chat-toggle" class="btn-icon" onclick="toggleChatDrawer()" title="Open Chat" style="display: none;">
+        <span>💬</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- VIEW 1: LANDING (HOST OR JOIN) -->
+  <main id="view-landing" class="view-container landing-view">
+    <div class="hero-box glass">
+      <h1 class="hero-title">BLUFF</h1>
+      <p class="hero-subtitle">The ultimate card bluffing & social deception party game.<br>Play with 2 to 16 friends with live voice chat!</p>
+
+      <!-- Profile Selector -->
+      <div class="player-profile-select">
+        <label class="form-label">Pick Your Avatar & Name</label>
+        <div class="avatar-grid" id="avatar-picker">
+          <div class="avatar-opt selected" data-avatar="🦊">🦊</div>
+          <div class="avatar-opt" data-avatar="🦁">🦁</div>
+          <div class="avatar-opt" data-avatar="🐯">🐯</div>
+          <div class="avatar-opt" data-avatar="🐻">🐻</div>
+          <div class="avatar-opt" data-avatar="🐼">🐼</div>
+          <div class="avatar-opt" data-avatar="🐨">🐨</div>
+          <div class="avatar-opt" data-avatar="🦄">🦄</div>
+          <div class="avatar-opt" data-avatar="🐲">🐲</div>
+          <div class="avatar-opt" data-avatar="🧙">🧙</div>
+          <div class="avatar-opt" data-avatar="🥷">🥷</div>
+          <div class="avatar-opt" data-avatar="🕵️">🕵️</div>
+          <div class="avatar-opt" data-avatar="👑">👑</div>
+        </div>
+        <input type="text" id="input-player-name" class="input-name" placeholder="Enter your nickname" maxlength="16">
+      </div>
+
+      <!-- Action Cards: HOST or JOIN -->
+      <div class="action-cards">
+        <div class="action-card-btn" onclick="openHostModal()">
+          <span class="card-icon">👑</span>
+          <span class="card-heading">HOST GAME</span>
+          <span class="card-desc">Create a dynamic room for 2-16 players</span>
+        </div>
+
+        <div class="action-card-btn" onclick="openJoinModal()">
+          <span class="card-icon">🚀</span>
+          <span class="card-heading">JOIN GAME</span>
+          <span class="card-desc">Enter room code or use shared link</span>
+        </div>
+      </div>
+
+      <!-- Landing Watermark -->
+      <div class="landing-author-badge">
+        Developed by <span class="author-name">Tanishq__</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- VIEW 2: LOBBY -->
+  <main id="view-lobby" class="view-container lobby-view" style="display: none;">
+    <div class="lobby-card glass">
+      <div class="lobby-top">
+        <div>
+          <h2 style="font-size: 26px; font-weight: 800; margin-bottom: 4px;">Game Lobby</h2>
+          <p style="color: var(--text-secondary); font-size: 14px;">Waiting for players to assemble...</p>
+        </div>
+
+        <div class="lobby-share-pill">
+          <span>Room Code: <strong id="lobby-code-display" style="color: var(--accent-gold); letter-spacing: 1.5px;">------</strong></span>
+          <button class="btn-copy-link" onclick="copyInviteLink()">Copy Invite Link</button>
+        </div>
+      </div>
+
+      <!-- Room Settings Overview -->
+      <div class="lobby-settings-summary">
+        <div>Max Players: <span id="summary-max-players">16</span></div>
+        <div>Decks: <span id="summary-decks">Auto</span></div>
+        <div>Jokers: <span id="summary-jokers">2 (Wild Truth)</span></div>
+        <div>Mode: <span id="summary-mode">Sequential (A-K)</span></div>
+        <div>Timer: <span id="summary-timer">30s</span></div>
+      </div>
+
+      <!-- Players Roster -->
+      <h3 style="font-size: 16px; margin-bottom: 14px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
+        Joined Players (<span id="player-count-lobby">0</span>/<span id="player-max-lobby">16</span>)
+      </h3>
+      <div class="players-grid-lobby" id="lobby-players-grid">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Host Control Actions -->
+      <div id="lobby-host-controls" style="margin-top: 20px;">
+        <button id="btn-start-game" class="btn-primary" onclick="startGame()">START GAME 🚀</button>
+      </div>
+      <div id="lobby-guest-notice" style="display: none; text-align: center; color: var(--text-secondary); font-size: 14px; margin-top: 15px;">
+        ⏳ Waiting for the room host to start the game...
+      </div>
+    </div>
+  </main>
+
+  <!-- VIEW 3: IN-GAME TABLE -->
+  <main id="view-game" class="view-container game-view" style="display: none;">
+    <!-- Circular / Elliptical Poker Table Area -->
+    <div class="table-wrapper">
+      <div class="poker-table" id="poker-table">
+        <!-- Felt watermark -->
+        <div class="table-felt-watermark">
+          <div class="felt-suits">♠ ♥ BLUFF ♦ ♣</div>
+          <div class="felt-author">DEVELOPED BY TANISHQ__</div>
+        </div>
+
+        <!-- Up to 16 seats positioned dynamically around table perimeter -->
+        <div id="table-seats-container"></div>
+
+        <!-- Table Center Area -->
+        <div class="center-area">
+          <!-- Required Rank Badge -->
+          <div class="claim-indicator-badge">
+            <span class="claim-label">Current Claim:</span>
+            <span class="claim-rank" id="table-current-rank">ACES (A)</span>
+          </div>
+
+          <!-- 3D Card Pile Stack -->
+          <div class="card-pile-stack" id="center-pile-stack">
+            <div class="stacked-card"></div>
+            <div class="stacked-card"></div>
+            <div class="stacked-card"></div>
+            <div class="pile-counter" id="center-pile-count">Pile: 0</div>
+          </div>
+
+          <!-- Last Play Action Banner -->
+          <div class="last-play-banner" id="last-play-banner" style="display: none;">
+            <span id="last-play-text">Alice played 2 cards as Kings</span>
+          </div>
+
+          <!-- Challenge Pulsating Button & Countdown Bar -->
+          <div class="challenge-controls" id="challenge-controls" style="display: none;">
+            <button class="btn-bluff" id="btn-call-bluff" onclick="callBluff()">🔥 CALL BLUFF! 🔥</button>
+            <div class="challenge-timer-bar">
+              <div class="challenge-timer-progress" id="challenge-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Bottom Hand Dock -->
+    <div class="player-hand-dock" id="player-hand-dock">
+      <div class="hand-controls-bar">
+        <div class="hand-info">
+          <span>Your Hand: <strong id="your-cards-count" style="color: var(--accent-gold);">0</strong> cards</span>
+          <button class="btn-sort" onclick="sortHand('rank')">Sort Rank</button>
+          <button class="btn-sort" onclick="sortHand('suit')">Sort Suit</button>
+        </div>
+
+        <div class="action-buttons-group">
+          <!-- Free Mode Rank Picker (Only visible if Free Rank mode is active and leading) -->
+          <select id="free-rank-select" class="form-select" style="display: none; width: auto; padding: 8px 12px; font-size: 13px;">
+            <option value="A">Ace</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="J">Jack</option>
+            <option value="Q">Queen</option>
+            <option value="K">King</option>
+          </select>
+
+          <button id="btn-play-cards" class="btn-action btn-play-cards" onclick="playSelectedCards()" disabled>
+            Play 0 Cards
+          </button>
+          <button id="btn-pass-turn" class="btn-action btn-pass-turn" onclick="passTurn()" style="display: none;">
+            Pass
+          </button>
+        </div>
+      </div>
+
+      <!-- Horizontally Scrollable Cards Container -->
+      <div class="cards-scroll-container" id="player-cards-scroll">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: HOST ROOM SETTINGS -->
+  <div id="modal-host" class="modal-overlay">
+    <div class="modal-box glass">
+      <div class="modal-header">
+        <h3 class="modal-title">Host New Room</h3>
+        <button class="btn-close" onclick="closeModal('modal-host')">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          <span>Max Players (2 - 16)</span>
+          <span id="slider-players-val" style="color: var(--accent-gold); font-weight: 700;">16</span>
+        </label>
+        <input type="range" id="host-max-players" min="2" max="16" value="16" class="form-input" oninput="document.getElementById('slider-players-val').textContent = this.value">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deck Count</label>
+        <select id="host-deck-mode" class="form-select">
+          <option value="auto">Auto (1 deck for 2-5, 2 decks for 6-10, 3 decks for 11+)</option>
+          <option value="1">1 Deck (52 cards)</option>
+          <option value="2">2 Decks (104 cards)</option>
+          <option value="3">3 Decks (156 cards)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Jokers (Always Truthful Wildcards)</label>
+        <select id="host-jokers" class="form-select">
+          <option value="2">2 Jokers</option>
+          <option value="4">4 Jokers</option>
+          <option value="0">0 Jokers (Standard 52)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Rule Mode</label>
+        <select id="host-rule-mode" class="form-select">
+          <option value="sequential">Sequential (Aces -> 2s -> 3s ... Kings -> Aces)</option>
+          <option value="free">Free Rank (Lead player chooses rank, others match or pass)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Turn Time Limit</label>
+        <select id="host-turn-timer" class="form-select">
+          <option value="30">30 seconds</option>
+          <option value="20">20 seconds (Fast)</option>
+          <option value="45">45 seconds</option>
+          <option value="0">No limit</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Challenge Window</label>
+        <select id="host-challenge-window" class="form-select">
+          <option value="7">7 seconds (Recommended)</option>
+          <option value="5">5 seconds (Quick)</option>
+          <option value="10">10 seconds</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="confirmHostRoom()">CREATE ROOM & PLAY 👑</button>
+    </div>
+  </div>
+
+  <!-- MODAL: JOIN ROOM -->
+  <div id="modal-join" class="modal-overlay">
+    <div class="modal-box glass">
+      <div class="modal-header">
+        <h3 class="modal-title">Join Existing Room</h3>
+        <button class="btn-close" onclick="closeModal('modal-join')">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Room Code</label>
+        <input type="text" id="join-room-code" class="form-input" placeholder="e.g. BLUFF7" style="text-transform: uppercase; letter-spacing: 2px; font-weight: 700; text-align: center; font-size: 20px;">
+      </div>
+
+      <button class="btn-primary" onclick="confirmJoinRoom()">ENTER ROOM 🚀</button>
+    </div>
+  </div>
+
+  <!-- MODAL: BLUFF REVEAL DRAMA -->
+  <div id="modal-reveal" class="modal-overlay">
+    <div class="modal-box glass reveal-modal">
+      <div id="reveal-banner" class="reveal-verdict-banner caught">
+        🚨 BLUFF CAUGHT!
+      </div>
+
+      <p id="reveal-summary-text" style="font-size: 16px; margin-bottom: 20px; line-height: 1.5;">
+        Alex claimed 2 Kings...
+      </p>
+
+      <div class="reveal-cards-row" id="reveal-cards-container">
+        <!-- 3D flip card animations inserted here -->
+      </div>
+
+      <p id="reveal-penalty-text" style="font-size: 14px; color: var(--accent-gold); font-weight: 700;">
+        Target picks up 14 cards from the pile!
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL: GAME OVER / PODIUM -->
+  <div id="modal-gameover" class="modal-overlay">
+    <div class="modal-box glass" style="text-align: center;">
+      <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 8px;">🏆 GAME OVER 🏆</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 24px;">All cards have been cleared!</p>
+
+      <div id="podium-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+        <!-- Winner ranks rendered here -->
+      </div>
+
+      <button class="btn-primary" onclick="returnToLobby()">BACK TO LOBBY</button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR: TEXT CHAT & GAME FEED -->
+  <aside id="chat-drawer" class="chat-drawer">
+    <div class="chat-header">
+      <span style="font-weight: 800; font-size: 15px; letter-spacing: 1px;">ROOM CHAT & FEED</span>
+      <button class="btn-close" onclick="toggleChatDrawer()">&times;</button>
+    </div>
+
+    <!-- Quick Reaction Emotes -->
+    <div class="chat-quick-emotes">
+      <button class="btn-quick-emote" onclick="sendQuickChat('🤨 Suspect!')">🤨 Sus</button>
+      <button class="btn-quick-emote" onclick="sendQuickChat('🤥 That is a bluff!')">🤥 Liar!</button>
+      <button class="btn-quick-emote" onclick="sendQuickChat('🃏 Truthful master!')">🃏 Master</button>
+      <button class="btn-quick-emote" onclick="sendQuickChat('🔥 Call bluff now!')">🔥 Bluff!</button>
+      <button class="btn-quick-emote" onclick="sendQuickChat('👏 Well played!')">👏 GG</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="chat-messages" id="chat-messages-container">
+      <div class="chat-msg is-system">
+        👋 Welcome to Bluff! Chat here or talk using voice.
+      </div>
+    </div>
+
+    <!-- Input Bar -->
+    <div class="chat-input-bar">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." maxlength="200" onkeydown="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn-chat-send" onclick="sendChatMessage()">➤</button>
+    </div>
+  </aside>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-notice">Notification text</div>
+
+  <!-- FLOATING WATERMARK BADGE -->
+  <div class="watermark-pill" title="Bluff Multiplayer Card Game">
+    <span class="wm-dot"></span>
+    <span class="wm-text">Developed by <strong>Tanishq__</strong></span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="audio.js"></script>
+  <script src="webrtc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
